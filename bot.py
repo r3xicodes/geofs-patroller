@@ -33,16 +33,15 @@ class PatrolBot(discord.Client):
                 print("[bot] Invalid GUILD_ID in .env")
 
         if guild:
-            # Clear old commands before resync
-            self.tree.clear_commands(guild=guild)
+            self.tree.clear_commands(guild=guild)  # wipe guild commands
             self.tree.copy_global_to(guild=guild)
             synced = await self.tree.sync(guild=guild)
             print(f"[bot] Force-synced {len(synced)} commands to guild {guild.id}")
         else:
-            self.tree.clear_commands()
+            self.tree.clear_commands()  # wipe global commands
             synced = await self.tree.sync()
             print(f"[bot] Force-synced {len(synced)} global commands")
-
+            
         loop = asyncio.get_running_loop()
         self.monitor.start_background(loop)
 
