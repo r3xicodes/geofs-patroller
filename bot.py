@@ -17,18 +17,21 @@ GUILD_ID = os.getenv("GUILD_ID")  # optional; use for instant guild sync
 if not TOKEN:
     raise RuntimeError("DISCORD_TOKEN not set in .env")
 
-# --- Force IPv4 for aiohttp ---
-connector = aiohttp.TCPConnector(family=socket.AF_INET)
-
 # use commands.Bot subclass to access tree easily and all intents
 class PatrolBot(discord.Client):
     def __init__(self):
         intents = discord.Intents.default()
-        super().__init__(intents=intents, connector=connector)
+        super().__init__(intents=intents)
         self.tree = app_commands.CommandTree(self)
         self.monitor = GeoFSMonitor()
+        self.connector: aiohttp.TCPConnector | None = None
+        self.session: aiohttp.ClientSession | None = None
 
     async def setup_hook(self):
+        # create aiohttp session *inside* running loop
+        self.connector = aiohttp.TCPConnector(family=socket.AF_INET)
+        self.session = aiohttp.ClientSession(connector=self.connector)
+
         guild = None
         if GUILD_ID:
             try:
@@ -56,6 +59,14 @@ class PatrolBot(discord.Client):
 
     async def on_ready(self):
         print(f"[bot] Logged in as {self.user} (id: {self.user.id})")
+
+    async def close(self):
+        # clean shutdown
+        if self.session:
+            await self.session.close()
+        if self.connector:
+            await self.connector.close()
+        await super().close()
 
 bot = PatrolBot()
 
