@@ -1,5 +1,5 @@
-# bot.py
 import os
+import socket
 import aiosqlite
 import discord
 from discord import app_commands
@@ -7,21 +7,9 @@ from dotenv import load_dotenv
 from datetime import datetime, timedelta, timezone
 from geofs_monitor import GeoFSMonitor, DB_FILE
 import asyncio
-import socket
 import aiohttp
 
-# Patch aiohttp to force IPv4 only
-old_resolve = aiohttp.connector.TCPConnector._resolve_host
-
-async def force_ipv4(self, host, port, *args, **kwargs):
-    infos = await self._loop.getaddrinfo(
-        host, port, type=socket.SOCK_STREAM, family=socket.AF_INET
-    )
-    return infos
-
-aiohttp.connector.TCPConnector._resolve_host = force_ipv4
 # ---------------- Setup ----------------
-
 load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
 GUILD_ID = os.getenv("GUILD_ID")  # optional; use for instant guild sync
@@ -29,16 +17,18 @@ GUILD_ID = os.getenv("GUILD_ID")  # optional; use for instant guild sync
 if not TOKEN:
     raise RuntimeError("DISCORD_TOKEN not set in .env")
 
+# --- Force IPv4 for aiohttp ---
+connector = aiohttp.TCPConnector(family=socket.AF_INET)
+
 # use commands.Bot subclass to access tree easily and all intents
 class PatrolBot(discord.Client):
     def __init__(self):
         intents = discord.Intents.default()
-        super().__init__(intents=intents)
+        super().__init__(intents=intents, connector=connector)
         self.tree = app_commands.CommandTree(self)
         self.monitor = GeoFSMonitor()
 
     async def setup_hook(self):
-        # Try guild sync if GUILD_ID present, otherwise global
         guild = None
         if GUILD_ID:
             try:
@@ -175,7 +165,7 @@ async def off_cmd(interaction: discord.Interaction,
         embed.add_field(name="Respawn Available", value=respawn, inline=False)
 
     await interaction.response.send_message(embed=embed)
-
+    
 # ---------------- Run ----------------
 try:
     bot.run(TOKEN)
