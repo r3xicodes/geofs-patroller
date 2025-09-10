@@ -1,5 +1,4 @@
 import os
-import socket
 import aiosqlite
 import discord
 from discord import app_commands
@@ -7,7 +6,6 @@ from dotenv import load_dotenv
 from datetime import datetime, timedelta, timezone
 from geofs_monitor import GeoFSMonitor, DB_FILE
 import asyncio
-import aiohttp
 
 # ---------------- Setup ----------------
 load_dotenv()
@@ -17,14 +15,11 @@ GUILD_ID = os.getenv("GUILD_ID")  # optional
 if not TOKEN:
     raise RuntimeError("DISCORD_TOKEN not set in .env")
 
-# force IPv4
-connector = aiohttp.TCPConnector(family=socket.AF_INET)
-
 
 class PatrolBot(discord.Client):
     def __init__(self):
         intents = discord.Intents.default()
-        super().__init__(intents=intents, connector=connector)
+        super().__init__(intents=intents)
         self.tree = app_commands.CommandTree(self)
         self.monitor = GeoFSMonitor()
 
