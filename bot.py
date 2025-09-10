@@ -7,6 +7,20 @@ from dotenv import load_dotenv
 from datetime import datetime, timedelta, timezone
 from geofs_monitor import GeoFSMonitor, DB_FILE
 import asyncio
+import socket
+import aiohttp
+
+# Patch aiohttp to force IPv4 only
+old_resolve = aiohttp.connector.TCPConnector._resolve_host
+
+async def force_ipv4(self, host, port, *args, **kwargs):
+    infos = await self._loop.getaddrinfo(
+        host, port, type=socket.SOCK_STREAM, family=socket.AF_INET
+    )
+    return infos
+
+aiohttp.connector.TCPConnector._resolve_host = force_ipv4
+# ---------------- Setup ----------------
 
 load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
