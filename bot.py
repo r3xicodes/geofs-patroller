@@ -23,7 +23,7 @@ class PatrolBot(discord.Client):
         self.tree = app_commands.CommandTree(self)
         self.monitor = GeoFSMonitor()
 
-        async def setup_hook(self):
+    async def setup_hook(self):
         guild = None
         if GUILD_ID:
             try:
@@ -33,9 +33,8 @@ class PatrolBot(discord.Client):
                 print("[bot] Invalid GUILD_ID in .env")
 
         if guild:
-            # Clear old commands
+            # Clear old commands before resync
             self.tree.clear_commands(guild=guild)
-            # Copy & sync new ones
             self.tree.copy_global_to(guild=guild)
             synced = await self.tree.sync(guild=guild)
             print(f"[bot] Force-synced {len(synced)} commands to guild {guild.id}")
@@ -43,6 +42,7 @@ class PatrolBot(discord.Client):
             self.tree.clear_commands()
             synced = await self.tree.sync()
             print(f"[bot] Force-synced {len(synced)} global commands")
+
         loop = asyncio.get_running_loop()
         self.monitor.start_background(loop)
 
