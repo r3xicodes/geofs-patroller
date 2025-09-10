@@ -7,6 +7,7 @@ from datetime import datetime
 
 load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
+GUILD_ID = 123456789012345678  # 👈 replace with your Discord server ID
 
 class GeoFSPatrolBot(discord.Client):
     def __init__(self):
@@ -15,9 +16,10 @@ class GeoFSPatrolBot(discord.Client):
         self.tree = app_commands.CommandTree(self)
 
     async def setup_hook(self):
-        # Sync commands to Discord
-        await self.tree.sync()
-        print("✅ Slash commands synced.")
+        guild = discord.Object(id=GUILD_ID)
+        self.tree.copy_global_to(guild=guild)
+        await self.tree.sync(guild=guild)
+        print(f"✅ Slash commands synced instantly to guild {GUILD_ID}")
 
 bot = GeoFSPatrolBot()
 DB_FILE = "patrols.db"
@@ -43,7 +45,7 @@ async def register(interaction: discord.Interaction, geofs_id: str, callsign: st
 @bot.tree.command(name="on", description="Start a patrol")
 async def on(interaction: discord.Interaction):
     async with aiosqlite.connect(DB_FILE) as db:
-        await db.execute("INSERT INTO patrols (discord_id) VALUES (?)", (interaction.user.id,))
+        await db.execute("INSERT INTO patrols (discord_id, start_time) VALUES (?, CURRENT_TIMESTAMP)", (interaction.user.id,))
         await db.commit()
 
     embed = discord.Embed(
